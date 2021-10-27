@@ -17,10 +17,9 @@
 
 from setuptools import setup
 
-from rs3f import __version__
-
 setup(
     name="rs3f",
-    version=__version__,
-    entry_points={"console_scripts": ["rs3fc = rs3fc.__main__:main"]},
+    version="1.0.2",
+    packages=["rs3f", "rs3fc", "rs3fc"],
+    entry_points={"console_scripts": ["rs3fc = rs3fc:main"]},
 )

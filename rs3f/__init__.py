@@ -21,7 +21,7 @@ import subprocess
 from typing import Callable, Optional, Union
 import warnings
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 
 
 class RS3FRuntimeWarning(RuntimeWarning):
