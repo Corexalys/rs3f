@@ -28,6 +28,9 @@ class ABCPasswordFetcher(ABC):
     priority = -1
     friendly_name = "UNSET"
 
+    def __init__(self, **kwargs) -> None:
+        pass
+
     @abstractmethod
     def get_password(self, password_key: str) -> Optional[str]:
         """Fetch the password for a volume and host pair."""
@@ -66,7 +69,7 @@ class PassPasswordFetcher(ABCPasswordFetcher):
     priority = 1
     friendly_name = "pass"
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         if not check_binary_available("pass"):
             raise RuntimeError("Pass is not installed")
 
@@ -91,12 +94,12 @@ class KeepassxcPasswordFetcher(ABCPasswordFetcher):
     priority = 2
     friendly_name = "keepassxc"
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         if not check_binary_available("keepassxc-cli"):
             raise RuntimeError("Keepassxc is not installed")
-        self.password_file_path = os.getenv(
-            "RS3F_KEEPASS_DB", os.path.expanduser("~/Passwords.kdbx")
-        )
+        if kwargs.get("keepassxc_database", None) is None:
+            raise RuntimeError("No Keepassxc password database specified")
+        self.password_file_path = kwargs["keepassxc_database"]
         if not os.path.exists(self.password_file_path):
             raise RuntimeError("Couldn't find the password database")
 
@@ -126,7 +129,7 @@ def _fetcher_color():
     print("\x1b[35m", end="", flush=True)
 
 
-def fetch_password(password_key: str, fetchers: str) -> str:
+def fetch_password(password_key: str, fetchers: str, **kwargs) -> str:
     """Return the password for a volume and a host."""
     fetchers_names = [
         fetcher_name.lower().strip() for fetcher_name in fetchers.split(",")
@@ -143,7 +146,7 @@ def fetch_password(password_key: str, fetchers: str) -> str:
         print(f"Using {Fetcher.friendly_name}")
         _fetcher_color()
         try:
-            fetcher = Fetcher()
+            fetcher = Fetcher(**kwargs)
             _reset_color()
         except Exception as exc:
             _reset_color()

@@ -46,18 +46,18 @@ def _parse_args() -> Namespace:
         default=None,
     )
 
-    subparsers = parser.add_subparsers(
-        title="operation", required=True, dest="operation"
-    )
+    subparsers = parser.add_subparsers(title="operation", required=True)
 
     version_subparser = subparsers.add_parser(
         "version", help="Display the version and exit"
     )
+    version_subparser.set_defaults(operation="version")
 
     # Mount arguments
     mount_subparser = subparsers.add_parser(
         "mount", aliases=["open"], help="Mount a remote directory"
     )
+    mount_subparser.set_defaults(operation="mount")
     mount_subparser.add_argument(
         "volume", help="The volume to mount: volume[@server[:port]]"
     )
@@ -81,15 +81,15 @@ def _parse_args() -> Namespace:
         default=None,
     )
     mount_subparser.add_argument(
-        "--password-pattern-no-port",
+        "--password-pattern",
         nargs=1,
-        help="The pattern for the name of the password in the password manager for a volume without port (default: rs3f/{volume}@{server})",
+        help="The pattern for the name of the password in the password manager for a volume without port (default: rs3f/{volume}@{server}:{port})",
         default=None,
     )
     mount_subparser.add_argument(
-        "--password-pattern-port",
+        "--keepassxc-database",
         nargs=1,
-        help="The pattern for the name of the password in the password manager for a volume with a port (default: rs3f/{volume}@{server}:{port})",
+        help="The path for the keepassxc database (default: ~/Passwords.kdbx)",
         default=None,
     )
 
@@ -97,6 +97,7 @@ def _parse_args() -> Namespace:
     umount_subparser = subparsers.add_parser(
         "umount", aliases=["close"], help="Umount a remote directory"
     )
+    umount_subparser.set_defaults(operation="umount")
     umount_subparser.add_argument("mountpoint", help="The folder to umount")
 
     return parser.parse_args()
@@ -107,8 +108,8 @@ def _parse_config(cli_config_path: Optional[str]) -> ConfigParser:
     config["rs3f"] = {
         "mountpoint": "./{volume}",
         "fetchers": get_default_fetchers_order(),
-        "password_pattern_no_port": "rs3f/{volume}@{server}",
-        "password_pattern_port": "rs3f/{volume}@{server}:{port}",
+        "password_pattern": "rs3f/{volume}@{server}:{port}",
+        "keepassxc_database": "~/Passwords.kdbx",
     }
 
     if cli_config_path is not None:
@@ -146,10 +147,6 @@ def main():
         if server is None:
             raise RuntimeError("No server specified")
 
-        full_target_string = (
-            f"{volume}@{server}:{port}" if port is not None else f"{volume}@{server}"
-        )
-
         if mountpoint is None:
             mountpoint = config.get("rs3f", "mountpoint", fallback=None)
         if mountpoint is None:
@@ -162,38 +159,34 @@ def main():
         if fetchers is None:
             raise RuntimeError("No fetchers specified")
 
-        if port is None:
-            password_pattern = args.password_pattern_no_port
-            if password_pattern is None:
-                password_pattern = config.get(
-                    "rs3f", "password_pattern_no_port", fallback=None
-                )
-            if password_pattern is None:
-                raise RuntimeError("No password pattern specified")
-        else:
-            password_pattern = args.password_pattern_port
-            if password_pattern is None:
-                password_pattern = config.get(
-                    "rs3f", "password_pattern_port", fallback=None
-                )
-            if password_pattern is None:
-                raise RuntimeError("No password pattern specified")
-
+        password_pattern = args.password_pattern
+        if password_pattern is None:
+            password_pattern = config.get("rs3f", "password_pattern", fallback=None)
+        if password_pattern is None:
+            raise RuntimeError("No password pattern specified")
         password_key = password_pattern.format(volume=volume, server=server, port=port)
 
+        keepassxc_database = args.keepassxc_database
+        if keepassxc_database is None:
+            keepassxc_database = config.get("rs3f", "keepassxc_database", fallback=None)
+        if keepassxc_database is not None:
+            keepassxc_database = os.path.expanduser(keepassxc_database)
+
         try:
-            print(f"Connecting to {full_target_string}.")
+            print(f"Connecting to {password_key}.")
             connect(
                 volume,
                 server,
                 mountpoint,
-                lambda: fetch_password(password_key, fetchers),
+                lambda: fetch_password(
+                    password_key, fetchers, keepassxc_database=keepassxc_database
+                ),
                 allow_init=args.allow_init,
                 port=port,
             )
-            print(f"Mounted {full_target_string} to {mountpoint}")
+            print(f"Mounted {password_key} to {mountpoint}")
         except Exception as exc:
-            print(f"Couldn't mount {full_target_string}: {exc}.")
+            print(f"Couldn't mount {password_key}: {exc}.")
             print("Cleaning up.")
             disconnect(mountpoint)
             sys.exit(1)
@@ -206,3 +199,4 @@ def main():
         if mountpoint is None:
             raise RuntimeError("No mountpoint specified")
         disconnect(mountpoint)
+        print(f"Unmounted {mountpoint}")
