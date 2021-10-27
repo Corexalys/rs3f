@@ -29,7 +29,7 @@ class ABCPasswordFetcher(ABC):
     friendly_name = "UNSET"
 
     @abstractmethod
-    def get_password(self, name: str, host: str, port: Optional[int]) -> Optional[str]:
+    def get_password(self, password_key: str) -> Optional[str]:
         """Fetch the password for a volume and host pair."""
 
 
@@ -44,16 +44,19 @@ def register_fetcher(class_: Type[ABCPasswordFetcher]) -> Type[ABCPasswordFetche
     return class_
 
 
+def get_default_fetchers_order() -> str:
+    """Return the friendly_names of the fetchers in the default order."""
+    return ",".join([Fetcher.friendly_name for Fetcher in _PASSWORD_FETCHERS])
+
+
 @register_fetcher
 class StdinPasswordFetcher(ABCPasswordFetcher):
     """Prompt the password to the user."""
 
     friendly_name = "stdin"
 
-    def get_password(self, name: str, host: str, port: Optional[int]) -> Optional[str]:
-        if port is not None:
-            return getpass(f"gocryptfs password for {name}@{host}:{port}? ")
-        return getpass(f"gocryptfs password for {name}@{host}? ")
+    def get_password(self, password_key: str) -> Optional[str]:
+        return getpass(f"gocryptfs password for {password_key}? ")
 
 
 @register_fetcher
@@ -67,16 +70,7 @@ class PassPasswordFetcher(ABCPasswordFetcher):
         if not check_binary_available("pass"):
             raise RuntimeError("Pass is not installed")
 
-    def get_password(self, name: str, host: str, port: Optional[int]) -> Optional[str]:
-        if port is None:
-            password_key = os.getenv(
-                "RS3F_PASS_PASSWORD_NAME", "rs3f/{name}@{host}"
-            ).format(name=name, host=host)
-        else:
-            password_key = os.getenv(
-                "RS3F_PASS_PASSWORD_NAME_PORT", "rs3f/{name}@{host}:{port}"
-            ).format(name=name, host=host, port=port)
-
+    def get_password(self, password_key: str) -> Optional[str]:
         pass_result = subprocess.run(
             [
                 "pass",
@@ -106,15 +100,7 @@ class KeepassxcPasswordFetcher(ABCPasswordFetcher):
         if not os.path.exists(self.password_file_path):
             raise RuntimeError("Couldn't find the password database")
 
-    def get_password(self, name: str, host: str, port: Optional[int]) -> Optional[str]:
-        if port is None:
-            password_key = os.getenv(
-                "RS3F_KEEPASS_PASSWORD_NAME", "rs3f/{name}@{host}"
-            ).format(name=name, host=host)
-        else:
-            password_key = os.getenv(
-                "RS3F_KEEPASS_PASSWORD_NAME_PORT", "rs3f/{name}@{host}:{port}"
-            ).format(name=name, host=host, port=port)
+    def get_password(self, password_key: str) -> Optional[str]:
         keepassxc = subprocess.run(
             [
                 "keepassxc-cli",
@@ -140,29 +126,38 @@ def _fetcher_color():
     print("\x1b[35m", end="", flush=True)
 
 
-def fetch_password(name: str, host: str, port: Optional[int]) -> str:
+def fetch_password(password_key: str, fetchers: str) -> str:
     """Return the password for a volume and a host."""
-    for PasswordFetcher in _PASSWORD_FETCHERS:
-        print(f"Using {PasswordFetcher.friendly_name}")
+    fetchers_names = [
+        fetcher_name.lower().strip() for fetcher_name in fetchers.split(",")
+    ]
+    for fetcher_name in fetchers_names:
+        Fetcher = None
+        for PasswordFetcher in _PASSWORD_FETCHERS:
+            if PasswordFetcher.friendly_name == fetcher_name:
+                Fetcher = PasswordFetcher
+        if Fetcher is None:
+            print(f"Unknown fetcher: {fetcher_name}")
+            continue
+
+        print(f"Using {Fetcher.friendly_name}")
         _fetcher_color()
         try:
-            fetcher = PasswordFetcher()
+            fetcher = Fetcher()
             _reset_color()
         except Exception as exc:
             _reset_color()
-            print(f"Couldn't initialize {PasswordFetcher.friendly_name}: {exc}")
+            print(f"Couldn't initialize {Fetcher.friendly_name}: {exc}")
             continue
 
         _fetcher_color()
         try:
-            result = fetcher.get_password(name, host, port)
+            result = fetcher.get_password(password_key)
             _reset_color()
             if result is not None:
                 return result
         except Exception as exc:
             _reset_color()
-            print(
-                f"Couldn't fetch the password using {PasswordFetcher.friendly_name}: {exc}"
-            )
+            print(f"Couldn't fetch the password using {Fetcher.friendly_name}: {exc}")
             continue
     raise RuntimeError("Couldn't determine the password for the gocryptfs")

@@ -24,7 +24,8 @@ from typing import Optional
 
 from rs3f import __version__, connect, disconnect
 
-from .passwordfetchers import fetch_password
+from .passwordfetchers import fetch_password, get_default_fetchers_order
+
 
 # TODO needs to be more restrictive on the server extraction, but this isn't
 # meant to be foolproof
@@ -72,6 +73,25 @@ def _parse_args() -> Namespace:
         help="Create the gocryptfs if necessary",
         action="store_true",
     )
+    mount_subparser.add_argument(
+        "--password-fetchers",
+        "-p",
+        nargs=1,
+        help=f"The password fetchers to use (default: {get_default_fetchers_order()})",
+        default=None,
+    )
+    mount_subparser.add_argument(
+        "--password-pattern-no-port",
+        nargs=1,
+        help="The pattern for the name of the password in the password manager for a volume without port (default: rs3f/{volume}@{server})",
+        default=None,
+    )
+    mount_subparser.add_argument(
+        "--password-pattern-port",
+        nargs=1,
+        help="The pattern for the name of the password in the password manager for a volume with a port (default: rs3f/{volume}@{server}:{port})",
+        default=None,
+    )
 
     # Umount arguments
     umount_subparser = subparsers.add_parser(
@@ -84,7 +104,12 @@ def _parse_args() -> Namespace:
 
 def _parse_config(cli_config_path: Optional[str]) -> ConfigParser:
     config = ConfigParser()
-    config["rs3f"] = {"mountpoint": "./{volume}"}
+    config["rs3f"] = {
+        "mountpoint": "./{volume}",
+        "fetchers": get_default_fetchers_order(),
+        "password_pattern_no_port": "rs3f/{volume}@{server}",
+        "password_pattern_port": "rs3f/{volume}@{server}:{port}",
+    }
 
     if cli_config_path is not None:
         read_paths = config.read(cli_config_path)
@@ -131,19 +156,49 @@ def main():
             raise RuntimeError("No mountpoint specified")
         mountpoint = mountpoint.format(volume=volume)
 
+        fetchers = args.password_fetchers
+        if fetchers is None:
+            fetchers = config.get("rs3f", "fetchers", fallback=None)
+        if fetchers is None:
+            raise RuntimeError("No fetchers specified")
+
+        if port is None:
+            password_pattern = args.password_pattern_no_port
+            if password_pattern is None:
+                password_pattern = config.get(
+                    "rs3f", "password_pattern_no_port", fallback=None
+                )
+            if password_pattern is None:
+                raise RuntimeError("No password pattern specified")
+        else:
+            password_pattern = args.password_pattern_port
+            if password_pattern is None:
+                password_pattern = config.get(
+                    "rs3f", "password_pattern_port", fallback=None
+                )
+            if password_pattern is None:
+                raise RuntimeError("No password pattern specified")
+
+        password_key = password_pattern.format(volume=volume, server=server, port=port)
+
         try:
             print(f"Connecting to {full_target_string}.")
             connect(
                 volume,
                 server,
                 mountpoint,
-                lambda: fetch_password(volume, server, port),
+                lambda: fetch_password(password_key, fetchers),
                 allow_init=args.allow_init,
                 port=port,
             )
             print(f"Mounted {full_target_string} to {mountpoint}")
         except Exception as exc:
             print(f"Couldn't mount {full_target_string}: {exc}.")
+            print("Cleaning up.")
+            disconnect(mountpoint)
+            sys.exit(1)
+        except KeyboardInterrupt:
+            print("Mount interrupted.")
             print("Cleaning up.")
             disconnect(mountpoint)
             sys.exit(1)
