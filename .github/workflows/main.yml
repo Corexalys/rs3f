@@ -1,0 +1,40 @@
+name: build_debian_package
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build the debian package
+        run: |
+          sudo apt-get -y install ruby squashfs-tools
+          sudo gem install fpm
+          fpm -s python -t deb --name rs3f --license gplv3 --depends sshfs --depends gocryptfs --depends python3 --python-bin python3 --python-install-lib "/usr/lib/python3/dist-packages" --url "https://github.com/Corexalys/rs3f" -p rs3f_all.deb ./
+
+      - name: Create a new release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload DEB as a release asset
+        id: upload_deb_release
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./rs3f_all.deb
+          asset_name: rs3f_all.deb
+          asset_content_type: application/gzip
