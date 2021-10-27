@@ -26,6 +26,7 @@ from rs3f import check_binary_available
 
 class ABCPasswordFetcher(ABC):
     priority = -1
+    friendly_name = "UNSET"
 
     @abstractmethod
     def get_password(self, name: str, host: str, port: Optional[int]) -> Optional[str]:
@@ -47,6 +48,8 @@ def register_fetcher(class_: Type[ABCPasswordFetcher]) -> Type[ABCPasswordFetche
 class StdinPasswordFetcher(ABCPasswordFetcher):
     """Prompt the password to the user."""
 
+    friendly_name = "stdin"
+
     def get_password(self, name: str, host: str, port: Optional[int]) -> Optional[str]:
         if port is not None:
             return getpass(f"gocryptfs password for {name}@{host}:{port}? ")
@@ -58,6 +61,7 @@ class PassPasswordFetcher(ABCPasswordFetcher):
     """Fetch the password using pass."""
 
     priority = 1
+    friendly_name = "pass"
 
     def __init__(self) -> None:
         if not check_binary_available("pass"):
@@ -90,7 +94,8 @@ class PassPasswordFetcher(ABCPasswordFetcher):
 class KeepassxcPasswordFetcher(ABCPasswordFetcher):
     """Fetch the password using keepassxc-cli."""
 
-    priority = 1
+    priority = 2
+    friendly_name = "keepassxc"
 
     def __init__(self) -> None:
         if not check_binary_available("keepassxc-cli"):
@@ -138,14 +143,14 @@ def _fetcher_color():
 def fetch_password(name: str, host: str, port: Optional[int]) -> str:
     """Return the password for a volume and a host."""
     for PasswordFetcher in _PASSWORD_FETCHERS:
-        print(f"Using {PasswordFetcher.__name__}")
+        print(f"Using {PasswordFetcher.friendly_name}")
         _fetcher_color()
         try:
             fetcher = PasswordFetcher()
             _reset_color()
         except Exception as exc:
             _reset_color()
-            print(f"Couldn't initialize {PasswordFetcher.__name__}: {exc}")
+            print(f"Couldn't initialize {PasswordFetcher.friendly_name}: {exc}")
             continue
 
         _fetcher_color()
@@ -157,7 +162,7 @@ def fetch_password(name: str, host: str, port: Optional[int]) -> str:
         except Exception as exc:
             _reset_color()
             print(
-                f"Couldn't fetch the password using {PasswordFetcher.__name__}: {exc}"
+                f"Couldn't fetch the password using {PasswordFetcher.friendly_name}: {exc}"
             )
             continue
     raise RuntimeError("Couldn't determine the password for the gocryptfs")
