@@ -159,14 +159,14 @@ def main():
         if fetchers is None:
             raise RuntimeError("No fetchers specified")
 
-        password_pattern = args.password_pattern
+        password_pattern = args.password_pattern[0]
         if password_pattern is None:
             password_pattern = config.get("rs3f", "password_pattern", fallback=None)
         if password_pattern is None:
             raise RuntimeError("No password pattern specified")
         password_key = password_pattern.format(volume=volume, server=server, port=port)
 
-        keepassxc_database = args.keepassxc_database
+        keepassxc_database = args.keepassxc_database[0]
         if keepassxc_database is None:
             keepassxc_database = config.get("rs3f", "keepassxc_database", fallback=None)
         if keepassxc_database is not None:
