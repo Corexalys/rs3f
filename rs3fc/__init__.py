@@ -43,10 +43,12 @@ def _parse_args() -> Namespace:
         "-c",
         nargs=1,
         help="The path for the config path (default: ~/.config/rs3f/config.ini or ~/.rs3f.ini)",
-        default=None,
+        default=[None],
     )
 
-    subparsers = parser.add_subparsers(title="operation", required=True)
+    subparsers = parser.add_subparsers(
+        title="operation", dest="operation", required=True
+    )
 
     version_subparser = subparsers.add_parser(
         "version", help="Display the version and exit"
@@ -78,19 +80,19 @@ def _parse_args() -> Namespace:
         "-p",
         nargs=1,
         help=f"The password fetchers to use (default: {get_default_fetchers_order()})",
-        default=None,
+        default=[None],
     )
     mount_subparser.add_argument(
         "--password-pattern",
         nargs=1,
         help="The pattern for the name of the password in the password manager for a volume without port (default: rs3f/{volume}@{server}:{port})",
-        default=None,
+        default=[None],
     )
     mount_subparser.add_argument(
         "--keepassxc-database",
         nargs=1,
         help="The path for the keepassxc database (default: ~/Passwords.kdbx)",
-        default=None,
+        default=[None],
     )
 
     # Umount arguments
@@ -125,7 +127,7 @@ def _parse_config(cli_config_path: Optional[str]) -> ConfigParser:
 
 def main():
     args = _parse_args()
-    config = _parse_config(args.config_path)
+    config = _parse_config(args.config_path[0])
 
     if args.operation == "version":
         print(f"{sys.argv[0]} version {__version__}.")
@@ -153,7 +155,7 @@ def main():
             raise RuntimeError("No mountpoint specified")
         mountpoint = mountpoint.format(volume=volume)
 
-        fetchers = args.password_fetchers
+        fetchers = args.password_fetchers[0]
         if fetchers is None:
             fetchers = config.get("rs3f", "fetchers", fallback=None)
         if fetchers is None:
