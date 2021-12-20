@@ -17,6 +17,7 @@
 
 from argparse import ArgumentParser, Namespace
 from configparser import ConfigParser
+import logging
 import os
 import re
 import sys
@@ -33,6 +34,11 @@ RE_VOLUME = re.compile(
     r"^(?P<volume>[a-z_][a-zA-Z0-9_-]{0,31})(@(?P<server>[^:@/]+?)(:(?P<port>\d{1,5}))?)?$"
 )
 
+VERBOSE_FORMATTER = logging.Formatter(
+    "%(levelname)s %(filename)s+%(lineno)d %(funcName)s: %(message)s"
+)
+QUIET_FORMATTER = logging.Formatter("%(levelname)s: %(message)s")
+
 
 def _parse_args() -> Namespace:
     """Parse the command line arguments."""
@@ -45,6 +51,10 @@ def _parse_args() -> Namespace:
         help="The path for the config path (default: ~/.config/rs3f/config.ini or ~/.rs3f.ini)",
         default=[None],
     )
+
+    verbose_group = parser.add_mutually_exclusive_group()
+    verbose_group.add_argument("--verbose", "-v", action="store_true")
+    verbose_group.add_argument("--debug", "-d", action="store_true")
 
     subparsers = parser.add_subparsers(
         title="operation", dest="operation", required=True
@@ -125,6 +135,25 @@ def _parse_config(cli_config_path: Optional[str]) -> ConfigParser:
     return config
 
 
+def setup_logging(args: Namespace) -> None:
+    """Configure the logging for rs3f."""
+    # Setup logging
+    logger = logging.getLogger("rs3f")
+    handler = logging.StreamHandler()
+    logger.addHandler(handler)
+    if args.verbose:
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(VERBOSE_FORMATTER)
+        logger.info("Running in verbose mode.")
+    elif args.debug:
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(VERBOSE_FORMATTER)
+        logger.debug("Running in debug mode.")
+    else:
+        handler.setLevel(logging.WARNING)
+        handler.setFormatter(QUIET_FORMATTER)
+
+
 def main():
     args = _parse_args()
     config = _parse_config(args.config_path[0])
@@ -132,6 +161,8 @@ def main():
     if args.operation == "version":
         print(f"{sys.argv[0]} version {__version__}.")
         return
+
+    setup_logging(args)
 
     mountpoint = args.mountpoint
 
