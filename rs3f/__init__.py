@@ -48,7 +48,7 @@ def get_raw_mount_path(mountpoint: str) -> os.PathLike:
             "$XDG_RUNTIME_DIR is not set, cannot determine raw mount path"
         )
     key = os.path.abspath(mountpoint)
-    key_hash = hashlib.sha256(key.encode()).hexdigest()
+    key_hash = hashlib.sha256(key.encode()).hexdigest()[:8]
     return os.path.join(runtime_dir, f"rs3f_{key_hash}")  # type: ignore
 
 
