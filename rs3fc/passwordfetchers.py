@@ -70,6 +70,7 @@ class PassPasswordFetcher(ABCPasswordFetcher):
     friendly_name = "pass"
 
     def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
         if not check_binary_available("pass"):
             raise RuntimeError("Pass is not installed")
 
@@ -80,6 +81,7 @@ class PassPasswordFetcher(ABCPasswordFetcher):
                 password_key,
             ],
             stdout=subprocess.PIPE,
+            check=False,
         )
         if pass_result.returncode != 0:
             print("Couldn't fetch password using pass")
@@ -95,6 +97,7 @@ class KeepassxcPasswordFetcher(ABCPasswordFetcher):
     friendly_name = "keepassxc"
 
     def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
         if not check_binary_available("keepassxc-cli"):
             raise RuntimeError("Keepassxc is not installed")
         if kwargs.get("keepassxc_database", None) is None:
@@ -114,6 +117,7 @@ class KeepassxcPasswordFetcher(ABCPasswordFetcher):
                 password_key,
             ],
             stdout=subprocess.PIPE,
+            check=False,
         )
         if keepassxc.returncode != 0:
             print("Couldn't fetch password using keepassxc-cli")
@@ -135,7 +139,7 @@ def fetch_password(password_key: str, fetchers: str, **kwargs) -> str:
         fetcher_name.lower().strip() for fetcher_name in fetchers.split(",")
     ]
     for fetcher_name in fetchers_names:
-        Fetcher = None
+        Fetcher: Optional[Type[ABCPasswordFetcher]] = None
         for PasswordFetcher in _PASSWORD_FETCHERS:
             if PasswordFetcher.friendly_name == fetcher_name:
                 Fetcher = PasswordFetcher

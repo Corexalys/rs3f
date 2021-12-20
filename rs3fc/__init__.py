@@ -23,7 +23,7 @@ import re
 import sys
 from typing import Optional
 
-from rs3f import __version__, connect, disconnect
+from rs3f import __version__, connect, disconnect, RS3FRuntimeError
 
 from .passwordfetchers import fetch_password, get_default_fetchers_order
 
@@ -218,6 +218,11 @@ def main():
                 port=port,
             )
             print(f"Mounted {password_key} to {mountpoint}")
+        except RS3FRuntimeError as exc:
+            print(f"Couldn't mount {password_key}: {exc}.")
+            print("Cleaning up.")
+            disconnect(mountpoint)
+            sys.exit(1)
         except Exception as exc:
             print(f"Couldn't mount {password_key}: {exc}.")
             print("Cleaning up.")

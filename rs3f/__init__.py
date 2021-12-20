@@ -34,22 +34,32 @@ class RS3FRuntimeError(RuntimeError):
 
 class NetworkingError(RS3FRuntimeError):
     """Raised when a network error occurred."""
+    def __str__(self) -> str:
+        return "A network error occurred: " + super().__str__()
 
 
 class InvalidSSHCredentials(RS3FRuntimeError):
     """Raised if we sent invalid credentials to the SSH server."""
+    def __str__(self) -> str:
+        return "Invalid credentials for the SSH server: " + super().__str__()
 
 
 class InvalidPassword(RS3FRuntimeError):
     """Raised if the password for the gocryptfs is invalid."""
+    def __str__(self) -> str:
+        return "Invalid credentials for the gocryptfs volume: " + super().__str__()
 
 
 class EnvironmentNotSetError(RS3FRuntimeError):
     """Raised when an environment variable was expected but not set."""
+    def __str__(self) -> str:
+        return "An environment variable isn't correctly set: " + super().__str__()
 
 
 class BinaryMissingError(RS3FRuntimeError):
     """Raised when a required program is missing from the system."""
+    def __str__(self) -> str:
+        return "A program is missing: " + super().__str__()
 
 
 def get_raw_mount_path(mountpoint: str) -> os.PathLike:
@@ -209,7 +219,8 @@ def disconnect(mountpoint: str) -> None:
                 check=False,
             )
             if fusermount.returncode != 0:
-                print(fusermount.stderr)
+                logger.debug("fusermount exit code %d:", fusermount.returncode)
+                logger.debug("%s", fusermount.stderr)
                 raise RS3FRuntimeError("Couldn't unmount the gocryptfs.")
 
         os.rmdir(mountpoint)
