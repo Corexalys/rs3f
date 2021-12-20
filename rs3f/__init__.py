@@ -88,7 +88,12 @@ def connect(
 
     # Raw mount
     os.makedirs(raw_mount_path, 0o700)
-    options = ["reconnect", "ServerAliveInterval=15", "ServerAliveCountMax=3"]
+    options = [
+        "reconnect",
+        "ServerAliveInterval=15",
+        "ServerAliveCountMax=3",
+        "idmap=user",
+    ]
     if port is not None:
         options.append(f"port={port}")
     sshfs = subprocess.run(
