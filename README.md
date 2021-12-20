@@ -15,6 +15,18 @@ It relies on keepassxc or pass to fetch the password for a volume. If none are a
   OR
   Copy the deb file to /tmp/rs3f.deb and run `sudo apt-get install -y -f /tmp/rs3f.deb`
 
+### NixOS
+
+- Clone the repo
+  ```bash
+  git clone https://github.com/Corexalys/rs3f
+  ```
+- Install the package to your user env
+  ```bash
+  cd rs3f
+  nix-env -i -f default.nix
+  ```
+
 ## How to use RS3F
 
 ```bash
