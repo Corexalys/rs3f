@@ -4,7 +4,7 @@ with python38Packages;
 
 buildPythonApplication rec {
     pname = "rs3fc";
-    version = "1.0.5";
+    version = "1.0.6";
 
     nativeBuildInputs = [ pkgs.sshfs pkgs.gocryptfs ];
 
