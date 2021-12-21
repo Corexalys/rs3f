@@ -1,2 +1,2 @@
-{ pkgs ? import <nixpkgs> {} }:
-pkgs.callPackage ./derivation.nix {}
+{ libsForQt5 ? import <nixpkgs> {} }:
+libsForQt5.callPackage ./derivation.nix {}

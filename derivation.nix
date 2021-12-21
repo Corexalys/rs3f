@@ -1,12 +1,18 @@
-{ lib, pkgs, python38Packages }:
+{ lib, pkgs, python3Packages, qt5 }:
 
-with python38Packages;
+with python3Packages;
 
 buildPythonApplication rec {
-    pname = "rs3fc";
-    version = "1.0.7";
+  pname = "rs3fc";
+  version = "1.0.7";
 
-    nativeBuildInputs = [ pkgs.sshfs pkgs.gocryptfs ];
+  src = ./.;
 
-    src = ./.;
+  buildInputs = [pkgs.sshfs pkgs.gettext];
+  propagatedBuildInputs = [ pyqt5 ];
+  nativeBuildInputs = [ qt5.wrapQtAppsHook ];
+
+  preFixup = ''
+    makeWrapperArgs+=("''${qtWrapperArgs[@]}")
+  '';
 }
