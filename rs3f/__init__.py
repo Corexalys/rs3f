@@ -73,7 +73,7 @@ def get_raw_mount_path(mountpoint: str) -> os.PathLike:
     key_hash = hashlib.sha256(key.encode()).hexdigest()[:8]
     raw_mount_path = os.path.join(runtime_dir, f"rs3f_{key_hash}")
     logger.debug(
-        "Using raw mount path %r for mountpoint %r.", raw_mount_path, mountpoint
+        "Using raw mount path %r for mountpoint %r.", raw_mount_path, os.path.abspath(mountpoint)
     )
     return raw_mount_path  # type: ignore
 
@@ -197,6 +197,33 @@ def connect(
     logger.info("RS3F volume mounted.")
 
 
+def _umount_fuse_fs(mountpoint: Union[str, os.PathLike], display_name: str) -> None:
+    """Unmount a single fuser fs."""
+    abspath = os.path.abspath(mountpoint)
+    parent, name = os.path.split(abspath)
+    logger.debug("Unmounting %s volume at %r.", display_name, abspath)
+    # We aren't using os.path.exists since it skips files that can't be stated.
+    # This happens if gocryptfs/sshfs exists improperly
+    mountpoint_exists = name in os.listdir(parent)
+    if mountpoint_exists:
+        # "not exists" -> cannot be stated, not properly unmounted
+        if not os.path.exists(abspath) or os.path.ismount(abspath):
+            fusermount = subprocess.run(
+                ["fusermount", "-u", abspath],
+                capture_output=True,
+                check=False,
+            )
+            if fusermount.returncode != 0:
+                logger.debug("fusermount exit code %d:", fusermount.returncode)
+                logger.debug("%s", fusermount.stderr)
+                raise RS3FRuntimeError(f"Couldn't unmount the {display_name} volume.")
+        else:
+            logger.warning("Volume %s already unmounted", display_name)
+        os.rmdir(abspath)
+    else:
+        logger.warning("Mount folder %r is missing.", mountpoint)
+
+
 def disconnect(mountpoint: str) -> None:
     """Unmount a folder from a remote rs3f share."""
     logger.info("Unmounting %r.", mountpoint)
@@ -205,43 +232,9 @@ def disconnect(mountpoint: str) -> None:
     if not check_binary_available("fusermount"):
         raise BinaryMissingError("FUSE is not installed")
 
-    # Unmount gocryptfs volume
-    logger.debug("Unmounting gocryptfs volume at %r.", mountpoint)
-    if not os.path.exists(mountpoint):
-        logger.warning("Mount folder %r is missing.", mountpoint)
-    else:
-        if not os.path.ismount(mountpoint):
-            logger.warning("Mount folder %r already unmounted", mountpoint)
-        else:
-            fusermount = subprocess.run(
-                ["fusermount", "-u", mountpoint],
-                capture_output=True,
-                check=False,
-            )
-            if fusermount.returncode != 0:
-                logger.debug("fusermount exit code %d:", fusermount.returncode)
-                logger.debug("%s", fusermount.stderr)
-                raise RS3FRuntimeError("Couldn't unmount the gocryptfs.")
-
-        os.rmdir(mountpoint)
-
     # Unmount raw volume
+    _umount_fuse_fs(mountpoint, "gocryptfs")
+
+    # Unmount sshfs volume
     raw_mount_path = get_raw_mount_path(mountpoint)
-    logger.debug("Unmounting raw volume at %r.", raw_mount_path)
-    if not os.path.exists(raw_mount_path):
-        logger.warning("Raw mount folder %r is missing.", raw_mount_path)
-    else:
-        if not os.path.ismount(raw_mount_path):
-            logger.warning("Raw mount folder %r is already unmounted.", raw_mount_path)
-        else:
-            fusermount = subprocess.run(
-                ["fusermount", "-u", raw_mount_path],
-                capture_output=True,
-                check=False,
-            )
-            if fusermount.returncode != 0:
-                logger.debug("fusermount exit code %d:", fusermount.returncode)
-                logger.debug("%s", fusermount.stderr)
-                raise RS3FRuntimeError("Couldn't unmount the raw mount.")
-        os.rmdir(raw_mount_path)
-    logger.info("RS3F volume unmounted.")
+    _umount_fuse_fs(raw_mount_path, "raw")
