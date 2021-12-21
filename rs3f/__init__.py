@@ -34,30 +34,35 @@ class RS3FRuntimeError(RuntimeError):
 
 class NetworkingError(RS3FRuntimeError):
     """Raised when a network error occurred."""
+
     def __str__(self) -> str:
         return "A network error occurred: " + super().__str__()
 
 
 class InvalidSSHCredentials(RS3FRuntimeError):
     """Raised if we sent invalid credentials to the SSH server."""
+
     def __str__(self) -> str:
         return "Invalid credentials for the SSH server: " + super().__str__()
 
 
 class InvalidPassword(RS3FRuntimeError):
     """Raised if the password for the gocryptfs is invalid."""
+
     def __str__(self) -> str:
         return "Invalid credentials for the gocryptfs volume: " + super().__str__()
 
 
 class EnvironmentNotSetError(RS3FRuntimeError):
     """Raised when an environment variable was expected but not set."""
+
     def __str__(self) -> str:
         return "An environment variable isn't correctly set: " + super().__str__()
 
 
 class BinaryMissingError(RS3FRuntimeError):
     """Raised when a required program is missing from the system."""
+
     def __str__(self) -> str:
         return "A program is missing: " + super().__str__()
 
@@ -73,7 +78,9 @@ def get_raw_mount_path(mountpoint: str) -> os.PathLike:
     key_hash = hashlib.sha256(key.encode()).hexdigest()[:8]
     raw_mount_path = os.path.join(runtime_dir, f"rs3f_{key_hash}")
     logger.debug(
-        "Using raw mount path %r for mountpoint %r.", raw_mount_path, os.path.abspath(mountpoint)
+        "Using raw mount path %r for mountpoint %r.",
+        raw_mount_path,
+        os.path.abspath(mountpoint),
     )
     return raw_mount_path  # type: ignore
 
@@ -89,13 +96,43 @@ def check_binary_available(name: str) -> bool:
     return False
 
 
+def _check_ssh_server_is_up(target_user: str, server: str, port: Optional[int]) -> None:
+    """Check if an SSH server is reachable, raise NetworkingError otherwise."""
+    logger.info("Checking if %s@%s:%s is reachable.", target_user, server, port)
+    options = {
+        # Disable keyboard interactions
+        "BatchMode": "yes",  # TODO maybe not in case the host key changes?
+        # Disable all authentication methods
+        "HostBasedAuthentication": "no",
+        "PasswordAuthentication": "no",
+        "PubkeyAuthentication": "no",
+        # Define a timeout
+        "ConnectTimeout": 60,
+    }
+    command = ["ssh"]
+    for key, value in options.items():
+        command.extend(["-o", f"{key}={value}"])
+    command.append(f"{target_user}@{server}")
+    if port is not None:
+        command.extend(["-p", str(port)])
+
+    ssh = subprocess.run(command, capture_output=True, check=False)
+
+    if b"Permission denied" not in ssh.stderr:
+        # If permission isn't denied, the connection probably failed
+        logger.debug("Command line: %s", command)
+        logger.debug("ssh exit code %d:", ssh.returncode)
+        logger.debug("%s", ssh.stderr)
+        raise NetworkingError("Could not reach SSH server")
+
+
 def connect(
     target_user: str,
     server: str,
     mountpoint: str,
     password: Union[str, Callable[[], str]],
     *,
-    port: Optional[int],
+    port: Optional[int] = None,
     allow_init: bool = False,
 ) -> None:
     """Connect to a remote rs3f share and mount it."""
@@ -124,7 +161,7 @@ def connect(
         disconnect(mountpoint)
 
     # Check SSH server is reachable
-    # TODO simple tcp connection (but we need to read the SSH config file…)
+    _check_ssh_server_is_up(target_user, server, port)
 
     # Raw mount
     logger.debug("Mounting raw volume to %r.", raw_mount_path)
@@ -149,10 +186,10 @@ def connect(
         check=False,
     )
     if sshfs.returncode != 0:
+        # Probably a credentials error since we checked for reachability before
         logger.debug("SSHFS exit code %d:", sshfs.returncode)
         logger.debug("%s", sshfs.stderr)
-        # TODO switch to InvalidSSHCredentials when server check is implemented
-        raise RS3FRuntimeError("Couldn't connect to the server")
+        raise InvalidSSHCredentials("Invalid SSH username or password.")
     logger.debug("Mounted raw volume")
 
     logger.debug("Checking for a gocryptfs volume")
@@ -216,7 +253,7 @@ def _umount_fuse_fs(mountpoint: Union[str, os.PathLike], display_name: str) -> N
             if fusermount.returncode != 0:
                 logger.debug("fusermount exit code %d:", fusermount.returncode)
                 logger.debug("%s", fusermount.stderr)
-                raise RS3FRuntimeError(f"Couldn't unmount the {display_name} volume.")
+                raise RS3FRuntimeError(f"Couldn't unmount the {display_name} volume")
         else:
             logger.warning("Volume %s already unmounted", display_name)
         os.rmdir(abspath)
