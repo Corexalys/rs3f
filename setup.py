@@ -21,6 +21,9 @@ setup(
     name="rs3f",
     version="1.0.7",
     packages=["rs3f", "rs3fc", "rs3ftray"],
+    package_data = {
+        "rs3ftray": ["*.png"],
+    },
     install_requires=["PyQt5"],
     entry_points={"console_scripts": ["rs3fc = rs3fc:main", "rs3f = rs3fc:main", "rs3ftray = rs3ftray:main"]},
 )

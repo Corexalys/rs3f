@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import *
 
 from rs3f import connect, disconnect
 
+
 class SettingsWindow(QMainWindow):
     """The settings window."""
 
@@ -46,8 +47,12 @@ class TrayMenu(QMenu):
         settings = QSettings("corexalys", "rs3ftray", parent=self)
         volumes = settings.value("volumes", [], type=str)
 
-        ICON_MOUNTED = QIcon(os.path.join(os.path.dirname(__file__), "menu_mounted.png"))
-        ICON_UNMOUNTED = QIcon(os.path.join(os.path.dirname(__file__), "menu_unmounted.png"))
+        ICON_MOUNTED = QIcon(
+            os.path.join(os.path.dirname(__file__), "menu_mounted.png")
+        )
+        ICON_UNMOUNTED = QIcon(
+            os.path.join(os.path.dirname(__file__), "menu_unmounted.png")
+        )
         settings_window = SettingsWindow(parent=self)
 
         self.addSection("Volumes")
@@ -83,6 +88,7 @@ class TrayIcon(QSystemTrayIcon):
 
         self.setIcon(ICON_NORMAL)
         self.setContextMenu(TrayMenu(app))
+
 
 def main():
     app = QApplication(sys.argv)
