@@ -19,6 +19,7 @@ import getpass
 import hashlib
 import logging
 import os
+import re
 import socket
 import subprocess
 from typing import Callable, Optional, Union
@@ -38,6 +39,12 @@ root:0
 
 logger = logging.getLogger("rs3f")
 logger.setLevel(logging.DEBUG)
+
+# TODO needs to be more restrictive on the server extraction, but this isn't
+# meant to be foolproof
+RE_VOLUME = re.compile(
+    r"^(?P<volume>[a-z_][a-zA-Z0-9_-]{0,31})(@(?P<server>[^:@/]+?)(:(?P<port>\d{1,5}))?)?$"
+)
 
 
 class RS3FRuntimeError(RuntimeError):
