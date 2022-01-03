@@ -110,12 +110,6 @@ class TrayMenu(QMenu):
 
         self.volume_actions: Set[QAction] = set()
 
-        ICON_MOUNTED = QIcon(
-            os.path.join(os.path.dirname(__file__), "menu_mounted.png")
-        )
-        ICON_UNMOUNTED = QIcon(
-            os.path.join(os.path.dirname(__file__), "menu_unmounted.png")
-        )
         settings_window = SettingsWindow(parent=self)
 
         self.addSection("Volumes")
