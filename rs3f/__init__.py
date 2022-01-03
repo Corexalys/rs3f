@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with rs3f.  If not, see <https://www.gnu.org/licenses/>.
 
+import getpass
 import hashlib
 import logging
 import os
@@ -23,6 +24,17 @@ import subprocess
 from typing import Callable, Optional, Union
 
 __version__ = "1.0.6"
+
+UIDFILE = """\
+{local_username}:{remote_uid}
+root:0
+"""
+
+# 999 is hardcoded to sftp_users in the rs3f server
+GIDFILE = """\
+users:999
+root:0
+"""
 
 logger = logging.getLogger("rs3f")
 logger.setLevel(logging.DEBUG)
@@ -67,16 +79,26 @@ class BinaryMissingError(RS3FRuntimeError):
         return "A program is missing: " + super().__str__()
 
 
-def get_raw_mount_path(mountpoint: str) -> os.PathLike:
-    """Return the raw mount path for a given user/server pair."""
+def get_mount_key(mountpoint: str) -> str:
+    """Return the mount key for a given mountpoint."""
+    key = os.path.abspath(mountpoint)
+    return hashlib.sha256(key.encode()).hexdigest()[:8]
+
+
+def get_runtime_dir() -> os.PathLike:
+    """Return the temporary runtime directory for this user."""
     runtime_dir = os.getenv("XDG_RUNTIME_DIR", None)
     if runtime_dir is None:
         raise EnvironmentNotSetError(
-            "$XDG_RUNTIME_DIR is not set, cannot determine raw mount path"
+            "$XDG_RUNTIME_DIR is not set, cannot determine runtime path"
         )
-    key = os.path.abspath(mountpoint)
-    key_hash = hashlib.sha256(key.encode()).hexdigest()[:8]
-    raw_mount_path = os.path.join(runtime_dir, f"rs3f_{key_hash}")
+    return runtime_dir
+
+
+def get_raw_mount_path(mountpoint: str) -> os.PathLike:
+    """Return the raw mount path for a given mountpoint."""
+    mount_key = get_mount_key(mountpoint)
+    raw_mount_path = os.path.join(get_runtime_dir(), f"rs3f_{mount_key}")
     logger.debug(
         "Using raw mount path %r for mountpoint %r.",
         raw_mount_path,
@@ -126,6 +148,58 @@ def _check_ssh_server_is_up(target_user: str, server: str, port: Optional[int]) 
         raise NetworkingError("Could not reach SSH server")
 
 
+def _get_remote_uid(target_user: str, server: str, port: Optional[int]) -> int:
+    """Return the UID of a volume's user (using the owner of gocryptfs_root)."""
+    logger.debug("Fetching the remote uid.")
+    args = (
+        [
+            "sftp",
+            "-q",
+            "-b",
+            "-",
+        ]
+        + (
+            [
+                "-P",
+                port,
+            ]
+            if port is not None
+            else []
+        )
+        + [
+            f"{target_user}@{server}",
+        ]
+    )
+    logger.debug("CALLING PROCESS: %s", " ".join(args))
+    sftp = subprocess.run(
+        args,
+        capture_output=True,
+        check=False,
+        input=b"ls -ln",
+    )
+    if sftp.returncode != 0:
+        # Probably a credentials error since we checked for reachability before
+        logger.debug("SFTP exit code %d:", sftp.returncode)
+        logger.debug("%s", sftp.stderr)
+        raise InvalidSSHCredentials("Invalid SSH username or password.")
+
+    remote_uid: Optional[int] = None
+    for line in sftp.stdout.split(b"\n")[1:]:
+        # Parsing the output of ls isn't great, but I haven't found a better way
+        parts = line.split()
+        name = parts[-1]
+        if name == b"gocryptfs_root":
+            remote_uid = int(parts[2])
+            break
+
+    if remote_uid is None:
+        raise RS3FRuntimeError(
+            "Could not find gocryptfs_root directory, is the volume a valid rs3f volume?"
+        )
+    logger.debug("Remote UID is %d.", remote_uid)
+    return remote_uid
+
+
 def connect(
     target_user: str,
     server: str,
@@ -163,6 +237,30 @@ def connect(
     # Check SSH server is reachable
     _check_ssh_server_is_up(target_user, server, port)
 
+    # Fetch target user ID
+    remote_uid = _get_remote_uid(target_user, server, port)
+
+    # Write sshfs uidfile and gidfile
+    uidfile_path = os.path.join(
+        get_runtime_dir(), "uidfile_" + get_mount_key(mountpoint)
+    )
+    gidfile_path = os.path.join(
+        get_runtime_dir(), "gidfile_" + get_mount_key(mountpoint)
+    )
+    logger.debug(
+        "Writing uidfile and gidfile to %r and %r respectively.",
+        uidfile_path,
+        gidfile_path,
+    )
+
+    with open(uidfile_path, "w") as uidfile:
+        local_username = getpass.getuser()
+        uidfile.write(
+            UIDFILE.format(local_username=local_username, remote_uid=remote_uid)
+        )
+    with open(gidfile_path, "w") as gidfile:
+        gidfile.write(GIDFILE)
+
     # Raw mount
     logger.debug("Mounting raw volume to %r.", raw_mount_path)
     os.makedirs(raw_mount_path, 0o700)
@@ -170,26 +268,34 @@ def connect(
         "reconnect",
         "ServerAliveInterval=15",
         "ServerAliveCountMax=3",
-        "idmap=user",
+        "idmap=file",
+        f"uidfile={uidfile_path}",
+        f"gidfile={gidfile_path}",
+        "nomap=ignore",
     ]
     if port is not None:
         options.append(f"port={port}")
+    args = [
+        "sshfs",
+        "-o",
+        ",".join(options),
+        f"{target_user}@{server}:/",
+        raw_mount_path,
+    ]
+    logger.debug("CALLING PROCESS: %s", " ".join(args))
     sshfs = subprocess.run(
-        [
-            "sshfs",
-            "-o",
-            ",".join(options),
-            f"{target_user}@{server}:/",
-            raw_mount_path,
-        ],
+        args,
         capture_output=True,
         check=False,
     )
     if sshfs.returncode != 0:
-        # Probably a credentials error since we checked for reachability before
+        # The server is up and the crendentials are valid, unknown cause.
         logger.debug("SSHFS exit code %d:", sshfs.returncode)
         logger.debug("%s", sshfs.stderr)
-        raise InvalidSSHCredentials("Invalid SSH username or password.")
+        raise RS3FRuntimeError(
+            "Could not mount raw volume (but server is up and credentials are "
+            "valid). Maybe the network is unstable?"
+        )
     logger.debug("Mounted raw volume")
 
     logger.debug("Checking for a gocryptfs volume")
