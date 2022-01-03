@@ -43,6 +43,16 @@ class SettingsWindow(QMainWindow):
         main_box.addLayout(left_box)
 
         right_box = QVBoxLayout()
+        right_box.addWidget(QLabel("Mount path"))
+        mount_path_row = QHBoxLayout()
+        mount_path_row.addWidget(
+            QLineEdit(self.settings.value("mount_path", "~", type=str))
+        )
+        browse_button = QPushButton("…")
+        browse_button.setFixedSize(22, 22)
+        mount_path_row.addWidget(browse_button)
+        right_box.addLayout(mount_path_row)
+        right_box.addWidget(QPushButton("Save mount path"))
         right_box.addWidget(QLabel("Autostart"))
         right_box.addWidget(QPushButton("Enable Autostart"))
         right_box.addWidget(QPushButton("Disable Autostart"))
