@@ -23,7 +23,7 @@ import socket
 import subprocess
 from typing import Callable, Optional, Union
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 
 UIDFILE = """\
 {local_username}:{remote_uid}
