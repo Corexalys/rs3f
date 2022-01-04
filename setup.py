@@ -24,6 +24,6 @@ setup(
     package_data = {
         "rs3ftray": ["*.png"],
     },
-    install_requires=["PyQt5"],
+    install_requires=["PyQt5", "secretstorage"],
     entry_points={"console_scripts": ["rs3fc = rs3fc:main", "rs3f = rs3fc:main", "rs3ftray = rs3ftray:main"]},
 )

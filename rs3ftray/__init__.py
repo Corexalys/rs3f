@@ -6,6 +6,7 @@ from typing import Dict, Optional, Set
 from PyQt5.QtCore import QSettings
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import *
+import secretstorage
 
 from rs3f import connect, disconnect, RE_VOLUME
 
@@ -81,6 +82,7 @@ class SettingsWindow(QMainWindow):
         window.setLayout(main_box)
 
     def browse_mount_path(self, _checked: bool) -> None:
+        """Open the directory browser to select a mountpath."""
         directory = QFileDialog.getExistingDirectory(self)
 
         # Cancelled
@@ -90,13 +92,16 @@ class SettingsWindow(QMainWindow):
         self.mount_path_edit.setText(directory)
 
     def save_mount_path(self, _checked: bool) -> None:
+        """Save the mount path."""
         self.settings.setValue("mount_path", self.mount_path_edit.text())
 
     def save_default_server(self, _checked: bool) -> None:
+        """Save the default server."""
         self.settings.setValue("server", self.default_server_edit.text())
         self.settings.setValue("port", self.default_server_port_spin.value())
 
     def delete_selected(self, _checked: bool) -> None:
+        """Delete the selected volumes."""
         volumes = self.settings.value("volumes") or []
 
         for index in self.list_widget.selectedIndexes()[::-1]:
@@ -111,6 +116,7 @@ class SettingsWindow(QMainWindow):
         self.parent().reload_volumes()
 
     def add_volume(self, volume_name: str) -> None:
+        """Add a volume to the saved volume list."""
         stripped = volume_name.strip()
 
         error_message: Optional[str] = None
@@ -140,9 +146,11 @@ class SettingsWindow(QMainWindow):
         self.parent().reload_volumes()
 
     def new_volume_return_pressed(self):
+        """Add the volume."""
         self.add_volume(self.new_volume_name.text())
 
     def add_volume_clicked(self, _checked: bool):
+        """Add the volume."""
         self.add_volume(self.new_volume_name.text())
 
 
@@ -174,6 +182,7 @@ class TrayMenu(QMenu):
         self.addAction(quit_action)
 
     def toggle_mount(self, volume: str, mount: bool):
+        """Mount or unmount the given volume."""
         # Should never happen
         if volume in MOUNTED_VOLUMES and mount:
             raise RuntimeError("Volume is already mounted")
@@ -224,19 +233,42 @@ class TrayMenu(QMenu):
         else:
             disconnect(MOUNTED_VOLUMES.pop(volume))
 
-    def fetch_password(self, volume_name: str) -> str:
-        # TODO Fetch using pass or keepass (dbus service for keepass?)
+    def fetch_password(self, volume_name: str) -> Optional[str]:
+        """Fetch the password for a given volume name."""
+        # Fetch password from the org.freedeskstop.secret dbus interface
+        connection = secretstorage.dbus_init()
+        collection = secretstorage.collection.get_default_collection(connection)
+        if collection.is_locked():
+            collection.unlock()
+        items = collection.search_items({"Title": volume_name})  # Keepass
+        for item in items:
+            return item.get_secret().decode()
+
+        # Password not found in the keyring, prompt it
         result, ok_pressed = QInputDialog.getText(
             self,
-            f"Password for {volume_name}",
-            "Password:",
-            QLineEdit.PasswordEchoOnEdit,
+            f"Password for {volume_name} not found",
+            "Please specify the password manually:",
+            QLineEdit.Password,
         )
         if not ok_pressed:
-            return ""
+            return None
+
+        # Save the password in the keyring if the user agrees
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Question)
+        message_box.setWindowTitle(f"Save the password for {volume_name}?")
+        message_box.setText(
+            f"Do you want to save the password for {volume_name} in the keyring?"
+        )
+        return_code = message_box.exec()
+        if return_code == QMessageBox.Ok:
+            collection.create_item(volume_name, {"Title": volume_name}, result.encode())
+
         return result
 
     def reload_volumes(self):
+        """Remove the volumes from the tray menu and re-add them."""
         volumes = self.settings.value("volumes") or []
 
         for action in self.volume_actions:
@@ -246,6 +278,7 @@ class TrayMenu(QMenu):
 
         if volumes:
             for volume in list(volumes):
+                # Needed since otherwise '_' are special characters
                 action = QAction(volume.replace("_", "__"), parent=self)
                 action.toggled.connect(
                     lambda checked, volume=volume: self.toggle_mount(volume, checked)
@@ -274,6 +307,7 @@ class TrayIcon(QSystemTrayIcon):
 
 
 def main():
+    """The main function."""
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     tray = TrayIcon(app)

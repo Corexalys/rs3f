@@ -9,7 +9,7 @@ buildPythonApplication rec {
   src = ./.;
 
   buildInputs = [pkgs.sshfs pkgs.gettext];
-  propagatedBuildInputs = [ pyqt5 ];
+  propagatedBuildInputs = [ pyqt5 secretstorage ];
   nativeBuildInputs = [ qt5.wrapQtAppsHook ];
 
   preFixup = ''
