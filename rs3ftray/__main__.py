@@ -15,15 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with rs3f.  If not, see <https://www.gnu.org/licenses/>.
 
-from setuptools import setup
+from . import main
 
-setup(
-    name="rs3f",
-    version="1.0.7",
-    packages=["rs3f", "rs3fc", "rs3ftray"],
-    package_data = {
-        "rs3ftray": ["*.png"],
-    },
-    install_requires=["PyQt5", "secretstorage"],
-    entry_points={"console_scripts": ["rs3fc = rs3fc:main", "rs3f = rs3fc:main", "rs3ftray = rs3ftray:main"]},
-)
+
+if __name__ == "__main__":
+    main()

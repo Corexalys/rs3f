@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="256"
+   height="256"
+   viewBox="0 0 67.733332 67.733335"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2 (e86c870879, 2021-01-15)"
+   sodipodi:docname="logo_error.svg"
+   inkscape:export-filename="/home/kge/Prog/rs3f/assets/icon_normal.png"
+   inkscape:export-xdpi="96.000008"
+   inkscape:export-ydpi="96.000008">
+  <defs
+     id="defs2">
+    <rect
+       x="0"
+       y="0"
+       width="67.733334"
+       height="67.733334"
+       id="rect917" />
+    <rect
+       x="33.866666"
+       y="50.799999"
+       width="42.982901"
+       height="40.817912"
+       id="rect873" />
+    <rect
+       x="50.799999"
+       y="33.866666"
+       width="43.236376"
+       height="37.127958"
+       id="rect867" />
+    <rect
+       x="33.866666"
+       y="16.933333"
+       width="44.244333"
+       height="32.939335"
+       id="rect861" />
+    <rect
+       x="16.933333"
+       y="33.866666"
+       width="50.825324"
+       height="34.185257"
+       id="rect855" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="128.74793"
+     inkscape:cy="139.33439"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0"
+     showgrid="true"
+     units="px"
+     inkscape:pagecheckerboard="true"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:snap-text-baseline="false"
+     inkscape:snap-object-midpoints="true"
+     inkscape:snap-bbox="true"
+     inkscape:snap-bbox-midpoints="true"
+     inkscape:window-width="1536"
+     inkscape:window-height="795"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid849"
+       spacingx="8.4666667"
+       spacingy="8.4666667"
+       dotted="false"
+       empspacing="2" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Calque 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#0d0d0d;stroke:none;stroke-width:4.23333;stroke-linecap:square;stroke-linejoin:bevel;fill-opacity:1"
+       id="rect1105"
+       width="67.73333"
+       height="67.73333"
+       x="0"
+       y="0"
+       rx="8.4666662"
+       ry="8.4666662" />
+    <text
+       xml:space="preserve"
+       id="text853"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:29.6333px;line-height:0;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';white-space:pre;shape-inside:url(#rect855);fill:#000000;fill-opacity:1;stroke:none;"
+       transform="translate(-14.254701,-30.32013)"><tspan
+         x="16.933594"
+         y="59.597941"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:33.8667px;line-height:1;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#ffffff;fill-opacity:1">R</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       id="text859"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:33.8667px;line-height:1;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';white-space:pre;shape-inside:url(#rect861);fill:#000000;fill-opacity:1;stroke:none;"
+       transform="translate(4.7619677,-13.403073)"><tspan
+         x="33.867188"
+         y="42.664348"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:33.8667px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#ffffff;fill-opacity:1">S</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       id="text865"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:33.8667px;line-height:33.8666px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';white-space:pre;shape-inside:url(#rect867);fill:#000000;fill-opacity:1;stroke:none;"
+       transform="translate(-45.434712,3.5300498)"><tspan
+         x="50.800781"
+         y="59.597892"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:33.8667px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#ffffff;fill-opacity:1">3</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       id="text871"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:33.8667px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';white-space:pre;shape-inside:url(#rect873);fill:#000000;fill-opacity:1;stroke:none;"
+       transform="translate(5.2332572,-17.620394)"><tspan
+         x="33.867188"
+         y="80.764873"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:33.8667px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#ffffff;fill-opacity:1">F</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       id="text915"
+       style="font-style:normal;font-weight:normal;font-size:56.0917px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect917);fill:#000000;fill-opacity:1;stroke:none;"
+       transform="translate(22.623677,4.6841922)"><tspan
+         x="0"
+         y="49.628009"><tspan
+           style="fill:#ffffff;fill-opacity:1">!</tspan></tspan></text>
+  </g>
+</svg>

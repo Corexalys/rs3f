@@ -19,20 +19,13 @@ from argparse import ArgumentParser, Namespace
 from configparser import ConfigParser
 import logging
 import os
-import re
 import sys
 from typing import Optional
 
-from rs3f import __version__, connect, disconnect, RS3FRuntimeError
+from rs3f import __version__, connect, disconnect, RS3FRuntimeError, RE_VOLUME
 
 from .passwordfetchers import fetch_password, get_default_fetchers_order
 
-
-# TODO needs to be more restrictive on the server extraction, but this isn't
-# meant to be foolproof
-RE_VOLUME = re.compile(
-    r"^(?P<volume>[a-z_][a-zA-Z0-9_-]{0,31})(@(?P<server>[^:@/]+?)(:(?P<port>\d{1,5}))?)?$"
-)
 
 VERBOSE_FORMATTER = logging.Formatter(
     "%(levelname)s %(filename)s+%(lineno)d %(funcName)s: %(message)s"
