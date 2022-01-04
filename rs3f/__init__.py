@@ -168,7 +168,7 @@ def _get_remote_uid(target_user: str, server: str, port: Optional[int]) -> int:
         + (
             [
                 "-P",
-                port,
+                str(port),
             ]
             if port is not None
             else []
