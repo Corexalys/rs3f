@@ -260,6 +260,8 @@ def connect(
         )
     with open(gidfile_path, "w") as gidfile:
         gidfile.write(GIDFILE)
+    os.chmod(uidfile_path, 0o600)
+    os.chmod(gidfile_path, 0o600)
 
     # Raw mount
     logger.debug("Mounting raw volume to %r.", raw_mount_path)
