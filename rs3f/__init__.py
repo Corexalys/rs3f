@@ -23,7 +23,7 @@ import socket
 import subprocess
 from typing import Callable, Optional, Union
 
-__version__ = "1.0.9"
+__version__ = "1.0.10"
 
 UIDFILE = """\
 {local_username}:{remote_uid}
@@ -268,8 +268,9 @@ def connect(
     os.makedirs(raw_mount_path, 0o700)
     options = [
         "reconnect",
-        "ServerAliveInterval=15",
-        "ServerAliveCountMax=3",
+        "ServerAliveInterval=10",
+        "ServerAliveCountMax=1",
+        "IPQoS=lowdelay",
         "idmap=file",
         f"uidfile={uidfile_path}",
         f"gidfile={gidfile_path}",
