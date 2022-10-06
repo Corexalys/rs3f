@@ -19,11 +19,12 @@ import getpass
 import hashlib
 import logging
 import os
+import shlex
 import socket
 import subprocess
-from typing import Callable, Optional, Union
+from typing import Callable, List, Optional, Union
 
-__version__ = "1.0.10"
+__version__ = "1.1.0"
 
 UIDFILE = """\
 {local_username}:{remote_uid}
@@ -208,6 +209,8 @@ def connect(
     *,
     port: Optional[int] = None,
     allow_init: bool = False,
+    sshfs_extra_args: Optional[List[str]] = None,
+    gocryptfs_extra_args: Optional[List[str]] = None,
 ) -> None:
     """Connect to a remote rs3f share and mount it."""
     logger.info("Connecting to %s@%s:%s.", target_user, server, port)
@@ -282,10 +285,17 @@ def connect(
         "sshfs",
         "-o",
         ",".join(options),
-        f"{target_user}@{server}:/",
-        raw_mount_path,
     ]
-    logger.debug("CALLING PROCESS: %s", " ".join(args))
+    if sshfs_extra_args is not None:
+        logger.debug("Including sshfs additional args %s", shlex.join(sshfs_extra_args))
+        args.extend(sshfs_extra_args)
+    args.extend(
+        [
+            f"{target_user}@{server}:/",
+            raw_mount_path,
+        ]
+    )
+    logger.debug("CALLING PROCESS: %s", shlex.join(args))
     sshfs = subprocess.run(
         args,
         capture_output=True,
@@ -323,12 +333,19 @@ def connect(
     # Actual mount
     logger.debug("Mounting the gocryptfs volume")
     os.makedirs(mountpoint, 0o700)
+    gocryptfs_args = [
+        os.path.join(raw_mount_path, "gocryptfs_root"),
+        mountpoint,
+    ]
+    if gocryptfs_extra_args is not None:
+        logger.debug(
+            "Including gocryptfs additional args %s", shlex.join(gocryptfs_extra_args)
+        )
+        gocryptfs_args = gocryptfs_extra_args + gocryptfs_args
+    gocryptfs_args.insert(0, "gocryptfs")
+    logger.debug("CALLING PROCESS: %s", shlex.join(gocryptfs_args))
     gocryptfs = subprocess.run(
-        [
-            "gocryptfs",
-            os.path.join(raw_mount_path, "gocryptfs_root"),
-            mountpoint,
-        ],
+        gocryptfs_args,
         capture_output=True,
         input=password_str.encode(),
         check=False,

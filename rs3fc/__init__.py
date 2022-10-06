@@ -20,6 +20,7 @@ from configparser import ConfigParser
 import logging
 import os
 import re
+import shlex
 import sys
 from typing import Optional
 
@@ -104,6 +105,18 @@ def _parse_args() -> Namespace:
         help="The path for the keepassxc database (default: ~/Passwords.kdbx)",
         default=[None],
     )
+    mount_subparser.add_argument(
+        "--sshfs-extra-args",
+        nargs=1,
+        help="The extra arguments to pass to sshfs",
+        default=[None],
+    )
+    mount_subparser.add_argument(
+        "--gocryptfs-extra-args",
+        nargs=1,
+        help="The extra arguments to pass to gocryptfs",
+        default=[None],
+    )
 
     # Umount arguments
     umount_subparser = subparsers.add_parser(
@@ -122,6 +135,8 @@ def _parse_config(cli_config_path: Optional[str]) -> ConfigParser:
         "fetchers": get_default_fetchers_order(),
         "password_pattern": "rs3f/{volume}@{server}:{port}",
         "keepassxc_database": "~/Passwords.kdbx",
+        "sshfs_extra_args": "",
+        "gocryptfs_extra_args": "",
     }
 
     if cli_config_path is not None:
@@ -205,6 +220,20 @@ def main():
         if keepassxc_database is not None:
             keepassxc_database = os.path.expanduser(keepassxc_database)
 
+        sshfs_extra_args = args.sshfs_extra_args[0]
+        if sshfs_extra_args is None:
+            sshfs_extra_args = config.get("rs3f", "sshfs_extra_args", fallback=None)
+        if sshfs_extra_args is not None:
+            sshfs_extra_args = sshfs_extra_args.strip()
+
+        gocryptfs_extra_args = args.gocryptfs_extra_args[0]
+        if gocryptfs_extra_args is None:
+            gocryptfs_extra_args = config.get(
+                "rs3f", "gocryptfs_extra_args", fallback=None
+            )
+        if gocryptfs_extra_args is not None:
+            gocryptfs_extra_args = gocryptfs_extra_args.strip()
+
         try:
             print(f"Connecting to {password_key}.")
             connect(
@@ -216,6 +245,12 @@ def main():
                 ),
                 allow_init=args.allow_init,
                 port=port,
+                sshfs_extra_args=shlex.split(sshfs_extra_args)
+                if sshfs_extra_args
+                else None,
+                gocryptfs_extra_args=shlex.split(gocryptfs_extra_args)
+                if gocryptfs_extra_args
+                else None,
             )
             print(f"Mounted {password_key} to {mountpoint}")
         except RS3FRuntimeError as exc:

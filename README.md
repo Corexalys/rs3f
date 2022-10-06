@@ -52,12 +52,24 @@ Here is an example configuration file:
 # ~/.rs3f.ini
 
 [rs3f]
+
 mountpoint=./{volume}
+
+# Use keepass by default, with a custom database path
 fetchers=keepassxc,stdin
 password_pattern=rs3f/{volume}@{server}:{port}
+
 keepassxc_database=~/Passwords.kdbx
+
+# Set the default server and port to use
 server=my_rs3f_server.com
 port=22
+
+# Debug sshfs
+sshfs_extra_args=-d
+
+# Readonly gocryptfs mounts and debug
+gocrypfts_extra_args=-ro -d
 ```
 
 ## How to setup the server
